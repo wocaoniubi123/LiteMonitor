@@ -42,15 +42,9 @@ namespace LiteMonitor
         // ========================================================
         private static readonly string[] VersionJsonUrls =
         {
-             // 国官网源
-            "https://litemonitor.cn/update/version.json",
-            
-            // Gitee RAW（自动 fallback 使用）
-             "https://gitee.com/Diorser/LiteMonitor/raw/master/resources/version.json",
-
-            // GitHub RAW（自动 fallback 使用）
-             "https://raw.githubusercontent.com/Diorser/LiteMonitor/master/resources/version.json",
-             
+            // [精准] 版本源指向自己 fork 的仓库，原作者(Diorser)发新版不再提示，
+            // 避免官方更新覆盖本地改动；仅本仓库有新版时才提示。
+            "https://raw.githubusercontent.com/wocaoniubi123/LiteMonitor/master/resources/version.json",
         };
 
         // ========================================================
@@ -58,15 +52,8 @@ namespace LiteMonitor
         // ========================================================
         private static readonly string[] Mirrors =
         {
-            
-            // Gitee Releases
-            "https://gitee.com/Diorser/LiteMonitor/releases/download/v{0}/LiteMonitor_v{0}-win-x64.zip",
-            // 国内 CDN
-            "https://litemonitor.cn/update/LiteMonitor_v{0}-win-x64.zip",
-            // Github Releases
-            "https://github.com/Diorser/LiteMonitor/releases/download/v{0}/LiteMonitor_v{0}-win-x64.zip",
-
-            
+            // 本仓库 Releases
+            "https://github.com/wocaoniubi123/LiteMonitor/releases/download/v{0}/LiteMonitor_v{0}-win-x64.zip",
         };
 
         /// <summary>
