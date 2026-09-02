@@ -1,0 +1,58 @@
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 版本号，如 1.3.7（不要带 v）
+        required: true
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      # 版本号：手动触发取输入；tag 触发从标签名提取 (v1.2.3 -> 1.2.3)
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          $v = "${{ inputs.version }}"
+          if ([string]::IsNullOrWhiteSpace($v)) { $v = "${{ github.ref_name }}".TrimStart('v') }
+          "LiteMonitor_${v}-win-x64.zip" | Out-File -Encoding ascii ZIP_NAME
+          echo "version=$v" >> $env:GITHUB_OUTPUT
+
+      - name: Publish
+        run: dotnet publish LiteMonitor.sln -c Release -r win-x64 --self-contained false -o publish
+
+      - name: Package zip
+        shell: pwsh
+        run: |
+          $zip = (Get-Content ZIP_NAME).Trim()
+          New-Item -ItemType Directory -Force stage | Out-Null
+          # 只打包运行所需文件，排除 pdb
+          Get-ChildItem publish | Where-Object { $_.Extension -ne '.pdb' } | ForEach-Object {
+            Copy-Item $_.FullName -Destination "stage/" -Recurse
+          }
+          Compress-Archive -Path stage/* -DestinationPath $zip -CompressionLevel Optimal
+          Get-Item $zip | Select-Object Name, Length
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: LiteMonitor_v${{ steps.version.outputs.version }}
+          body: LiteMonitor win-x64 版本发布（CI 自动构建产物）。
+          generate_release_notes: false
+          files: LiteMonitor_*-win-x64.zip
