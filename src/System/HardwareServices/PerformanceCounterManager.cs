@@ -21,6 +21,13 @@ namespace LiteMonitor.src.SystemServices
         private PerformanceCounter? _diskActiveCounter;   // 磁盘活动时间 (%)
         private PerformanceCounter? _uptimeCounter;       // 系统运行时间
 
+        // CPU 采样节流：固定 ~1s 窗口，使读数与任务管理器"当前CPU%"一致
+        // [ponytail] UI 刷新可调到 80ms，但 % Processor Time 基于系统时间片(15.6ms)累计，
+        // 采样间隔越短抖动越大/越高；这里强制约 1s 才重算一次，稳定且贴合任务管理器。
+        private readonly Stopwatch _cpuLoadSw = new();
+        private float _lastCpuLoad = 0f;
+        private const double CpuLoadSampleMs = 1000.0;
+
         // --- SMB 计数器 (用于忽略内网流量) ---
         // 经过探测发现，SMB Client Shares 经常缺失，而 Redirector (RDR) 和 Server 是更底层的组件
         // Redirector = 客户端流量 (我访问别人)
@@ -61,16 +68,13 @@ namespace LiteMonitor.src.SystemServices
                     // 2. 创建计数器实例
                     // 注意：CategoryName 即使在中文系统通常也支持英文，为了兼容性优先用英文
                     
-                    // CPU 负载：使用 Processor Information 类别 (Win8+ 推荐)，兼容性更好
-                    // [Fix] 使用 "% Processor Utility" 而非 "% Processor Time"
-                    // 任务管理器在 Win8+ 显示的是 "Utility" (考虑睿频)，而非 "Time"
-                    _cpuLoadCounter = CreateCounter("Processor Information", "% Processor Utility", "_Total");
+                    // CPU 负载：优先 % Processor Time（与任务管理器"当前CPU%"同语义的忙碌百分比）
+                    // [精准] 不用 % Processor Utility：它在高睿频/超线程下读数偏高，且 _Total 抖动大。
+                    // 数据源与任务管理器同源(PDH)，精度差异主要来自采样窗口，见 GetCpuLoad 固定 1s 节流。
+                    _cpuLoadCounter = CreateCounter("Processor Information", "% Processor Time", "_Total");
 
                     if (_cpuLoadCounter == null)
-                        _cpuLoadCounter = CreateCounter("Processor Information", "% Processor Time", "_Total"); // 回退1
-
-                    if (_cpuLoadCounter == null) 
-                        _cpuLoadCounter = CreateCounter("Processor", "% Processor Time", "_Total"); // 旧系统回退
+                        _cpuLoadCounter = CreateCounter("Processor", "% Processor Time", "_Total"); // 旧系统(Win7及以下)回退
 
                     // CPU 频率：读取性能百分比 (Performance Limit)，需配合基准频率计算
                     _cpuFreqCounter = CreateCounter("Processor Information", "% Processor Performance", "_Total");
@@ -183,9 +187,15 @@ namespace LiteMonitor.src.SystemServices
 
         public float? GetCpuLoad()
         {
+            // [精准] 固定 ~1s 采样窗口：无论 UI 刷新多快，CPU 都按约 1s 间隔取 % Processor Time，
+            // 与任务管理器一致；两次 NextValue 间隔稳定，避免短窗口下的时间片粒度失真。
+            if (_cpuLoadSw.IsRunning && _cpuLoadSw.Elapsed.TotalMilliseconds < CpuLoadSampleMs)
+                return _lastCpuLoad;
+
             var val = SafeRead(_cpuLoadCounter);
-            // [Fix] Utility 计数器在睿频时可能超过 100%，需截断以匹配任务管理器行为
-            return val > 100f ? 100f : val;
+            _lastCpuLoad = val.HasValue ? Math.Clamp(val.Value, 0f, 100f) : 0f;
+            _cpuLoadSw.Restart();
+            return _lastCpuLoad;
         }
 
         public float? GetCpuFreq()

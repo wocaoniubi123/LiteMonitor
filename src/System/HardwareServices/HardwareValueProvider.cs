@@ -32,36 +32,6 @@ namespace LiteMonitor.src.SystemServices
         private const float AutoMoboTempHardMax = 95f;
         private const float ManualMoboTempHardMax = 125f;
 
-        // ★★★ EMA 平滑：用于消除磁盘/网络/CPU 等速率类指标的短周期抖动 ★★★
-        // [ponytail] 只对实时速率/百分比类指标平滑，累计值(DATA)、温度、风扇、电压等传感器读数
-        // 保持原值，避免改变其语义或让告警/读数变得迟钝。
-        private const float SmoothFactor = 0.4f; // 适中强度：越大跟随越快，越小越平滑
-        private readonly Dictionary<string, float> _emaHistory = new();
-
-        // 是否需要对该键做 EMA 平滑
-        private static bool ShouldSmooth(string key)
-        {
-            if (key.StartsWith("DATA")) return false;        // 每日累计流量
-            if (key.Contains(".Temp")) return false;          // 温度（告警依赖）
-            if (key.Contains(".Fan") || key.Contains("Pump")) return false; // 风扇/水泵转速
-            if (key.Contains("Voltage") || key.Contains("Current")) return false; // 电压/电流
-            if (key.StartsWith("GPU.VRAM")) return false;     // 显存（递归计算值）
-            return true; // CPU.Load/Clock、MEM.Load、DISK.Read/Write/Activity、NET 速率等
-        }
-
-        private float SmoothValue(string key, float raw)
-        {
-            if (!ShouldSmooth(key)) return raw;
-            if (_emaHistory.TryGetValue(key, out float prev))
-            {
-                float next = prev + SmoothFactor * (raw - prev);
-                _emaHistory[key] = next;
-                return next;
-            }
-            _emaHistory[key] = raw;
-            return raw;
-        }
-
         // 配置版本追踪，用于自动触发预热
         private string _lastPrefCpuFan = "";
         private string _lastPrefCpuPump = "";
@@ -546,9 +516,8 @@ namespace LiteMonitor.src.SystemServices
                 // ★★★ [新增 4] 写入缓存并返回 ★★★
                 if (result.HasValue)
                 {
-                    float value = SmoothValue(key, result.Value);
-                    _tickCache[key] = value;
-                    return value;
+                    _tickCache[key] = result.Value;
+                    return result.Value;
                 }
 
                 return null;
