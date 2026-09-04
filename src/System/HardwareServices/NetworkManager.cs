@@ -531,6 +531,17 @@ namespace LiteMonitor.src.SystemServices
 
         private static readonly string[] _upKW = { "upload", "up", "sent", "send", "tx", "transmit" };
         private static readonly string[] _downKW = { "download", "down", "received", "receive", "rx" };
-        private static readonly string[] _virtualNicKW = { "virtual", "vmware", "hyper-v", "hyper v", "vbox", "loopback", "tunnel", "tap", "tun", "bluetooth", "zerotier", "tailscale", "wan miniport" };
+        private static readonly string[] _virtualNicKW = {
+            // 通用虚拟网卡
+            "virtual", "vmware", "hyper-v", "hyper v", "vbox", "loopback", "bluetooth", "wan miniport",
+            // TUN/TAP 驱动
+            "tunnel", "tap", "tun", "wintun", "tap-windows", "tap-windows_adapter", "tap-", "tun-", "winnet", "win tap",
+            // 代理 / Clash 系
+            "clash", "mihomo", "verge", "sing-box", "singbox",
+            // VPN / 加密隧道
+            "wg", "wireguard", "wireguard tunnel", "tunwg", "openvpn", "softether", "sstap", "torguard",
+            // P2P 组网
+            "zerotier", "tailscale", "nordlynx", "radmin", "hamachi",
+        };
     }
 }
