@@ -150,10 +150,53 @@ namespace LiteMonitor.src.Plugins
                     settings.MonitorItems.Remove(item);
                     changed = true;
                 }
+
+                // [Fix] 插件监控项永远排在最后：设置页保存会按 UI 行序重编号，
+                // 这里每次同步都把插件项的索引顶到所有非插件项之后（保持它们之间的相对顺序）。
+                NormalizePluginItemOrder(settings, ref changed);
             } // End Lock
 
             if (changed && saveIfChanged) settings.Save();
             return changed;
+        }
+
+        /// <summary>
+        /// 插件项判定：DASH.&lt;插件id&gt;.&lt;输出&gt;（比看板项 DASH.HOST 多一个点）
+        /// </summary>
+        internal static bool IsPluginItemKey(string key)
+        {
+            if (string.IsNullOrEmpty(key) || !key.StartsWith(PluginConstants.DASH_PREFIX)) return false;
+            return key.IndexOf('.', PluginConstants.DASH_PREFIX.Length) >= 0;
+        }
+
+        /// <summary>
+        /// 把所有插件项的排序索引顶到非插件项之后（保持插件项之间的相对顺序）。
+        /// 目的：设置页保存会按 UI 行序重编号 SortIndex，不给这层兜底，插件项每次都会被编到前面。
+        /// </summary>
+        private static void NormalizePluginItemOrder(Settings settings, ref bool changed)
+        {
+            if (settings?.MonitorItems == null) return;
+
+            var pluginItems = settings.MonitorItems.Where(x => IsPluginItemKey(x.Key)).ToList();
+            if (pluginItems.Count == 0) return;
+
+            var others = settings.MonitorItems.Where(x => !IsPluginItemKey(x.Key)).ToList();
+            int maxSort = others.Count > 0 ? others.Max(x => x.SortIndex) : 0;
+            int maxTbSort = others.Count > 0 ? others.Max(x => x.TaskbarSortIndex) : 0;
+
+            int next = maxSort + 1;
+            foreach (var it in pluginItems.OrderBy(x => x.SortIndex).ThenBy(x => x.Key, StringComparer.Ordinal))
+            {
+                if (it.SortIndex != next) { it.SortIndex = next; changed = true; }
+                next++;
+            }
+
+            int nextTb = maxTbSort + 1;
+            foreach (var it in pluginItems.OrderBy(x => x.TaskbarSortIndex).ThenBy(x => x.Key, StringComparer.Ordinal))
+            {
+                if (it.TaskbarSortIndex != nextTb) { it.TaskbarSortIndex = nextTb; changed = true; }
+                nextTb++;
+            }
         }
 
         /// <summary>

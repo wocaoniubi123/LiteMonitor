@@ -245,7 +245,9 @@ namespace LiteMonitor
                     CachedUIGroup = "HOST"; 
                 else if (_key.StartsWith("DASH."))
                 {
-                    CachedUIGroup = "DASH";
+                    // 插件项（DASH.<插件id>.<输出>）单独成组 "PLUGIN"，永远排在最后；
+                    // 看板项（DASH.HOST / DASH.Time 等只有一个点）仍属 DASH 组。
+                    CachedUIGroup = _key.IndexOf('.', "DASH.".Length) >= 0 ? "PLUGIN" : "DASH";
                     string sub = _key.Substring(5);
                     CachedDashColorKey = UIUtils.Intern(sub + ".Color");
                     CachedDashUnitKey = UIUtils.Intern(sub + ".Unit");
@@ -313,7 +315,8 @@ namespace LiteMonitor
                 
                 if (Key.StartsWith("DASH."))
                 {
-                    return "DASH";
+                    // 与 Key setter 中的分组规则保持一致
+                    return Key.IndexOf('.', "DASH.".Length) >= 0 ? "PLUGIN" : "DASH";
                 }
 
                 return Key.Split('.')[0]; 
