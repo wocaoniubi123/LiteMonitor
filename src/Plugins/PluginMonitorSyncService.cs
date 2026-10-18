@@ -154,6 +154,17 @@ namespace LiteMonitor.src.Plugins
                 // [Fix] 插件监控项永远排在最后：设置页保存会按 UI 行序重编号，
                 // 这里每次同步都把插件项的索引顶到所有非插件项之后（保持它们之间的相对顺序）。
                 NormalizePluginItemOrder(settings, ref changed);
+
+                // 每个插件实例独立分组：组名用插件自身名称（用户改过别名则不覆盖）
+                string groupKey = "PLUGIN_" + inst.Id;
+                if (!string.IsNullOrEmpty(tmpl.Meta?.Name))
+                {
+                    if (!settings.GroupAliases.TryGetValue(groupKey, out var alias) || string.IsNullOrEmpty(alias))
+                    {
+                        settings.GroupAliases[groupKey] = tmpl.Meta.Name;
+                        changed = true;
+                    }
+                }
             } // End Lock
 
             if (changed && saveIfChanged) settings.Save();
@@ -170,8 +181,9 @@ namespace LiteMonitor.src.Plugins
         }
 
         /// <summary>
-        /// 把所有插件项的排序索引顶到非插件项之后（保持插件项之间的相对顺序）。
-        /// 目的：设置页保存会按 UI 行序重编号 SortIndex，不给这层兜底，插件项每次都会被编到前面。
+        /// 把所有插件项的排序索引顶到非插件项之后，并按「一个插件一个分组」保持整组连续。
+        /// 组间顺序 = 插件实例列表顺序；组内顺序 = 原有行序（用户可自行上下调）。
+        /// 目的：设置页保存会按 UI 行序重编号 SortIndex，不给这层兜底，插件项每次都会被编乱。
         /// </summary>
         private static void NormalizePluginItemOrder(Settings settings, ref bool changed)
         {
@@ -184,15 +196,37 @@ namespace LiteMonitor.src.Plugins
             int maxSort = others.Count > 0 ? others.Max(x => x.SortIndex) : 0;
             int maxTbSort = others.Count > 0 ? others.Max(x => x.TaskbarSortIndex) : 0;
 
+            // 插件实例顺序 → 分组顺序
+            var instOrder = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            if (settings.PluginInstances != null)
+            {
+                for (int i = 0; i < settings.PluginInstances.Count; i++)
+                    instOrder[settings.PluginInstances[i].Id] = i;
+            }
+
+            int GroupRank(MonitorItemConfig x)
+            {
+                string g = x.UIGroup ?? "";
+                string id = g.StartsWith("PLUGIN_") ? g.Substring("PLUGIN_".Length) : g;
+                return instOrder.TryGetValue(id, out var idx) ? idx : int.MaxValue;
+            }
+
+            var ordered = pluginItems
+                .GroupBy(x => x.UIGroup)
+                .OrderBy(g => GroupRank(g.First()))
+                .ThenBy(g => g.Key, StringComparer.Ordinal)
+                .SelectMany(g => g.OrderBy(x => x.SortIndex).ThenBy(x => x.Key, StringComparer.Ordinal))
+                .ToList();
+
             int next = maxSort + 1;
-            foreach (var it in pluginItems.OrderBy(x => x.SortIndex).ThenBy(x => x.Key, StringComparer.Ordinal))
+            foreach (var it in ordered)
             {
                 if (it.SortIndex != next) { it.SortIndex = next; changed = true; }
                 next++;
             }
 
             int nextTb = maxTbSort + 1;
-            foreach (var it in pluginItems.OrderBy(x => x.TaskbarSortIndex).ThenBy(x => x.Key, StringComparer.Ordinal))
+            foreach (var it in ordered)
             {
                 if (it.TaskbarSortIndex != nextTb) { it.TaskbarSortIndex = nextTb; changed = true; }
                 nextTb++;

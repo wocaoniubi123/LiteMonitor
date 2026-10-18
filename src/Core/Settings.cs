@@ -245,9 +245,14 @@ namespace LiteMonitor
                     CachedUIGroup = "HOST"; 
                 else if (_key.StartsWith("DASH."))
                 {
-                    // 插件项（DASH.<插件id>.<输出>）单独成组 "PLUGIN"，永远排在最后；
+                    // 插件项（DASH.<插件id>.<输出> / DASH.<插件id>.<序号>.<输出>）：
+                    // 每个插件实例独立成一个分组 "PLUGIN_<插件id>"，组名由同步服务写入 GroupAliases（插件名）。
                     // 看板项（DASH.HOST / DASH.Time 等只有一个点）仍属 DASH 组。
-                    CachedUIGroup = _key.IndexOf('.', "DASH.".Length) >= 0 ? "PLUGIN" : "DASH";
+                    string rest = _key.Substring("DASH.".Length);
+                    int dot = rest.IndexOf('.');
+                    CachedUIGroup = dot > 0
+                        ? UIUtils.Intern("PLUGIN_" + rest.Substring(0, dot))
+                        : "DASH";
                     string sub = _key.Substring(5);
                     CachedDashColorKey = UIUtils.Intern(sub + ".Color");
                     CachedDashUnitKey = UIUtils.Intern(sub + ".Unit");
@@ -315,8 +320,10 @@ namespace LiteMonitor
                 
                 if (Key.StartsWith("DASH."))
                 {
-                    // 与 Key setter 中的分组规则保持一致
-                    return Key.IndexOf('.', "DASH.".Length) >= 0 ? "PLUGIN" : "DASH";
+                    // 与 Key setter 中的分组规则保持一致：每个插件实例一个分组
+                    string rest = Key.Substring("DASH.".Length);
+                    int dot = rest.IndexOf('.');
+                    return dot > 0 ? UIUtils.Intern("PLUGIN_" + rest.Substring(0, dot)) : "DASH";
                 }
 
                 return Key.Split('.')[0]; 
