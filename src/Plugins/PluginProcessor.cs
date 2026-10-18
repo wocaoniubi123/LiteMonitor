@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -112,6 +113,9 @@ namespace LiteMonitor.src.Plugins
                     case "threshold_switch":
                         val = ApplyThresholdSwitch(val, t);
                         break;
+                    case "round":
+                        val = ApplyRound(val, t);
+                        break;
                 }
 
                 context[t.TargetVar] = val;
@@ -186,6 +190,30 @@ namespace LiteMonitor.src.Plugins
                 return "0"; 
             }
             return "0";
+        }
+
+        /// <summary>
+        /// 数值四舍五入并固定小数位。to = 小数位数（默认 2）。
+        /// 例：346.99999999999994 → 347.00；347 → 347.00；347.005 → 347.01
+        /// </summary>
+        private static string ApplyRound(string val, PluginTransform t)
+        {
+            int digits = 2;
+            if (!string.IsNullOrEmpty(t.To) && int.TryParse(t.To, out int d)) digits = d;
+            if (digits < 0) digits = 0;
+            if (digits > 10) digits = 10;
+
+            if (decimal.TryParse(val, NumberStyles.Float, CultureInfo.InvariantCulture, out decimal dec))
+            {
+                dec = Math.Round(dec, digits, MidpointRounding.AwayFromZero);
+                return dec.ToString("F" + digits, CultureInfo.InvariantCulture);
+            }
+            if (double.TryParse(val, NumberStyles.Float, CultureInfo.InvariantCulture, out double dbl))
+            {
+                dbl = Math.Round(dbl, digits, MidpointRounding.AwayFromZero);
+                return dbl.ToString("F" + digits, CultureInfo.InvariantCulture);
+            }
+            return val;
         }
 
         /// <summary>
