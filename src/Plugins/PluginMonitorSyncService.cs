@@ -182,7 +182,8 @@ namespace LiteMonitor.src.Plugins
 
         /// <summary>
         /// 把所有插件项的排序索引顶到非插件项之后，并按「一个插件一个分组」保持整组连续。
-        /// 组间顺序 = 插件实例列表顺序；组内顺序 = 原有行序（用户可自行上下调）。
+        /// 组间顺序 = 各组当前最小 SortIndex（即用户在设置页调好的顺序，原样保留）；
+        /// 组内顺序 = 原有行序。只在索引越界时才重排，不改变用户已排好的相对位置。
         /// 目的：设置页保存会按 UI 行序重编号 SortIndex，不给这层兜底，插件项每次都会被编乱。
         /// </summary>
         private static void NormalizePluginItemOrder(Settings settings, ref bool changed)
@@ -196,24 +197,10 @@ namespace LiteMonitor.src.Plugins
             int maxSort = others.Count > 0 ? others.Max(x => x.SortIndex) : 0;
             int maxTbSort = others.Count > 0 ? others.Max(x => x.TaskbarSortIndex) : 0;
 
-            // 插件实例顺序 → 分组顺序
-            var instOrder = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            if (settings.PluginInstances != null)
-            {
-                for (int i = 0; i < settings.PluginInstances.Count; i++)
-                    instOrder[settings.PluginInstances[i].Id] = i;
-            }
-
-            int GroupRank(MonitorItemConfig x)
-            {
-                string g = x.UIGroup ?? "";
-                string id = g.StartsWith("PLUGIN_") ? g.Substring("PLUGIN_".Length) : g;
-                return instOrder.TryGetValue(id, out var idx) ? idx : int.MaxValue;
-            }
-
+            // 组间顺序沿用各组现有最小索引，组内沿用现有索引 —— 用户调过的顺序原样保留
             var ordered = pluginItems
                 .GroupBy(x => x.UIGroup)
-                .OrderBy(g => GroupRank(g.First()))
+                .OrderBy(g => g.Min(x => x.SortIndex))
                 .ThenBy(g => g.Key, StringComparer.Ordinal)
                 .SelectMany(g => g.OrderBy(x => x.SortIndex).ThenBy(x => x.Key, StringComparer.Ordinal))
                 .ToList();
