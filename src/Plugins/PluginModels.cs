@@ -201,6 +201,9 @@ namespace LiteMonitor.src.Plugins
 
         [JsonPropertyName("unit")]
         public string Unit { get; set; } = ""; // 单位
+
+        [JsonPropertyName("keep_on_error")]
+        public bool KeepOnError { get; set; } = false; // true=采集失败时保留上一次的值，不覆盖为 ❌
     }
 
     public class PluginInputOption

@@ -685,8 +685,11 @@ namespace LiteMonitor.src.Plugins
                 {
                     string injectKey = inst.Id + keySuffix + "." + output.Key;
                     
-                    // Inject Error Status
-                    InfoService.Instance.InjectValue(injectKey, PluginConstants.STATUS_ERROR);
+                    // Inject Error Status (output.keep_on_error=true 时保留上一次的值，避免闪 ❌)
+                    if (!output.KeepOnError)
+                    {
+                        InfoService.Instance.InjectValue(injectKey, PluginConstants.STATUS_ERROR);
+                    }
 
                     // Try resolve label (ignore errors in template resolution)
                     try 
