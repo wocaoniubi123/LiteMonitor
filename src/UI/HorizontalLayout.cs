@@ -105,12 +105,10 @@ namespace LiteMonitor
             int contentHeight = (isTaskbarSingle || isHorizontalSingle) ? _rowH : _rowH * 2;
             int barHeight = padV * 2 + contentHeight;
 
-            // 横条模式：自定义高度（0=自动）。低于自动高度时按自动高度兜底，避免上下被裁。
+            // 横条模式：自定义高度（0=自动）。填多少用多少，不再设下限；过小会裁字，由用户自行取舍。
             if (_mode == LayoutMode.Horizontal && _settings.HorizontalHeight > 0)
             {
-                int customHeight = (int)Math.Round(_settings.HorizontalHeight * dpi);
-                if (customHeight < barHeight) customHeight = barHeight;
-                barHeight = customHeight;
+                barHeight = (int)Math.Round(_settings.HorizontalHeight * dpi);
             }
 
             // 内容在横条内垂直居中（自动高度时等于原来的 padV）
