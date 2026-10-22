@@ -35,14 +35,23 @@ namespace LiteMonitor
             using (var g = Graphics.FromHwnd(IntPtr.Zero))
             {
                 _dpiScale = g.DpiX / 96f;
+
+                if (mode == LayoutMode.Horizontal)
+                {
+                    // 单字体：行高按实际字形测量。Font.Height(12) 小于 TextRenderer 实际所需高度(15)，
+                    // 直接用它做行高会把中文/长数字的上下伸部裁掉。
+                    _rowH = Math.Max(t.FontItem.Height,
+                        TextRenderer.MeasureText(g, "国", t.FontItem,
+                            new Size(int.MaxValue, int.MaxValue),
+                            TextFormatFlags.NoPadding).Height);
+                }
+                else
+                {
+                    _rowH = 0; // 任务栏模式稍后根据 taskbarHeight 决定
+                }
             }
 
             _padding = t.Layout.Padding;
-
-            if (mode == LayoutMode.Horizontal)
-                _rowH = t.FontItem.Height; // 单字体：横条标签/数值统一用 Item 字体
-            else
-                _rowH = 0; // 任务栏模式稍后根据 taskbarHeight 决定
 
             PanelWidth = initialWidth;
         }
