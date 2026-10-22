@@ -188,6 +188,7 @@
     "MainForm": "Panel",
     "OnlyShowEnabled": "Enabled Only",
     "HorizontalFollowsTaskbar": "Bar follows taskbar order",
+    "HorizontalHeight": "Bar height",
     "MonitorItemTip": "Tip: Space in Name/Short hides label. Empty resets. Units support {u}+char.",
 
     "__Comment_Page4__": "--- 4. Thresholds ---",

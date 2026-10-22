@@ -69,6 +69,20 @@ namespace LiteMonitor
             int totalWidth = pad * 2;
             float dpi = _dpiScale;
 
+            int contentHeight = (isTaskbarSingle || isHorizontalSingle) ? _rowH : _rowH * 2;
+            int barHeight = padV * 2 + contentHeight;
+
+            // 横条模式：自定义高度（0=自动）。低于文字所需高度时按内容高度兜底，避免裁字。
+            if (_mode == LayoutMode.Horizontal && _settings.HorizontalHeight > 0)
+            {
+                int customHeight = (int)Math.Round(_settings.HorizontalHeight * dpi);
+                if (customHeight < contentHeight) customHeight = contentHeight;
+                barHeight = customHeight;
+            }
+
+            // 内容在横条内垂直居中（自动高度时等于原来的 padV）
+            int contentTop = (barHeight - contentHeight) / 2;
+
             using (var g = Graphics.FromHwnd(IntPtr.Zero))
             {
                 foreach (var col in cols)
@@ -111,7 +125,7 @@ namespace LiteMonitor
                 else
                     colHeight = _rowH * 2;
                 
-                col.Bounds = new Rectangle(x, padV, col.ColumnWidth, colHeight);
+                col.Bounds = new Rectangle(x, contentTop, col.ColumnWidth, colHeight);
 
                 if (_mode == LayoutMode.Taskbar)
                 {
@@ -151,7 +165,7 @@ namespace LiteMonitor
                 x += col.ColumnWidth + gap;
             }
 
-            return padV * 2 + ((isTaskbarSingle || isHorizontalSingle) ? _rowH : _rowH * 2);
+            return barHeight;
         }
 
         private int MeasureMetricItem(Graphics g, MetricItem item, Settings.TBStyle s)

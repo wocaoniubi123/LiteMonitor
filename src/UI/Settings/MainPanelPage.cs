@@ -131,7 +131,12 @@ namespace LiteMonitor.src.UI.SettingsPage
                 () => Config.HorizontalSingleLine,
                 v => Config.HorizontalSingleLine = v);
 
-            // 3. Spacing
+            // 3. Bar Height (0 = auto)
+            groupHorz.AddInt(this, "Menu.HorizontalHeight", "px",
+                () => Config.HorizontalHeight,
+                v => Config.HorizontalHeight = v);
+
+            // 4. Spacing
             groupHorz.AddInt(this, "Menu.TaskbarItemSpacing", "px",
                 () => Config.HorizontalItemSpacing,
                 v => Config.HorizontalItemSpacing = v);

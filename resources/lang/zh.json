@@ -187,6 +187,7 @@
     "MainForm": "主界面",
     "OnlyShowEnabled": "仅看显示项",
     "HorizontalFollowsTaskbar": "横条模式采用任务栏排序",
+    "HorizontalHeight": "横条高度",
     "MonitorItemTip": "注：名称/简称/单位输入空格即可不显示标签或单位，而清空保存后会恢复默认，部分单位支持占位符{u}+字符",
 
     "__Comment_Page4__": "--- 4. 告警阈值设置 (ThresholdPage) ---",
