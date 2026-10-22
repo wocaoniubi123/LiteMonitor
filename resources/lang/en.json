@@ -191,6 +191,8 @@
     "HorizontalHeight": "Bar height",
     "HorizontalLabelFontSize": "Label font size",
     "HorizontalValueFontSize": "Value font size",
+    "HorizontalValueFontFamily": "Value font",
+    "HorizontalValueFontFollow": "Follow theme",
     "MonitorItemTip": "Tip: Space in Name/Short hides label. Empty resets. Units support {u}+char.",
 
     "__Comment_Page4__": "--- 4. Thresholds ---",

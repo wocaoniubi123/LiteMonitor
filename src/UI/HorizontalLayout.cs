@@ -2,6 +2,7 @@ using LiteMonitor.src.Core;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 
 namespace LiteMonitor
@@ -53,7 +54,17 @@ namespace LiteMonitor
                     valuePt = Math.Clamp(valuePt, 5.0, 72.0);
 
                     _labelFont = new Font(t.FontItem.FontFamily, (float)labelPt, t.FontItem.Style);
-                    _valueFont = new Font(t.FontItem.FontFamily, (float)valuePt, t.FontItem.Style);
+
+                    // 数值字体：留空=跟随主题标签字体；否则用指定字体（找不到则回退）
+                    FontFamily valueFamily = t.FontItem.FontFamily;
+                    string customFamily = _settings.HorizontalValueFontFamily?.Trim() ?? "";
+                    if (customFamily.Length > 0)
+                    {
+                        var match = FontFamily.Families.FirstOrDefault(
+                            f => f.Name.Equals(customFamily, StringComparison.OrdinalIgnoreCase));
+                        if (match != null) valueFamily = match;
+                    }
+                    _valueFont = new Font(valueFamily, (float)valuePt, t.FontItem.Style);
 
                     // 行高按实际字形测量。Font.Height 小于 TextRenderer 实际所需高度，直接用会裁掉上下伸部。
                     int MeasureH(Font f) => TextRenderer.MeasureText(g, "国", f,

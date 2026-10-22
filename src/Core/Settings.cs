@@ -76,6 +76,7 @@ namespace LiteMonitor
         public int HorizontalHeight { get; set; } = 0; // 横条高度 (px, 0=自动跟随字体)
         public double HorizontalLabelFontSize { get; set; } = 0; // 横条参数名字号 (pt, 0=跟随主题)
         public double HorizontalValueFontSize { get; set; } = 0; // 横条参数数值字号 (pt, 0=跟随主题)
+        public string HorizontalValueFontFamily { get; set; } = ""; // 横条数值字体 (""=跟随主题标签字体)
 
         // ★★★ 常量定义：用于 GetStyle 中的默认策略 ★★★
         public const string DEFAULT_TB_FONT = "Microsoft YaHei UI"; // 任务栏默认字体（兼容多语言环境，系统自带）

@@ -145,7 +145,16 @@ namespace LiteMonitor.src.UI.SettingsPage
                 () => Config.HorizontalValueFontSize,
                 v => Config.HorizontalValueFontSize = v);
 
-            // 5. Spacing
+            // 5. Value font family ("" = follow theme)
+            string followFont = LanguageManager.T("Menu.HorizontalValueFontFollow");
+            var fontItems = new[] { followFont }
+                .Concat(FontFamily.Families.Select(f => f.Name).OrderBy(n => n, StringComparer.CurrentCultureIgnoreCase))
+                .ToList();
+            groupHorz.AddCombo(this, "Menu.HorizontalValueFontFamily", fontItems,
+                () => string.IsNullOrWhiteSpace(Config.HorizontalValueFontFamily) ? followFont : Config.HorizontalValueFontFamily,
+                v => Config.HorizontalValueFontFamily = (v == followFont ? "" : v));
+
+            // 6. Spacing
             groupHorz.AddInt(this, "Menu.TaskbarItemSpacing", "px",
                 () => Config.HorizontalItemSpacing,
                 v => Config.HorizontalItemSpacing = v);
