@@ -123,7 +123,7 @@ namespace LiteMonitor
             
             Color valColor = it.GetTextColor(t);
 
-            TextRenderer.DrawText(g, valText, t.FontValue, it.ValueRect,
+            TextRenderer.DrawText(g, valText, t.FontItem, it.ValueRect,
                 valColor,
                 TextFormatFlags.Right | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
 
@@ -155,7 +155,7 @@ namespace LiteMonitor
 
             Color valColor = it.GetTextColor(t);
 
-            TextRenderer.DrawText(g, valText, t.FontValue, it.ValueRect,
+            TextRenderer.DrawText(g, valText, t.FontItem, it.ValueRect,
                 valColor,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.Bottom | TextFormatFlags.NoPadding);
         }

@@ -84,11 +84,11 @@ namespace LiteMonitor
             );
 
             // Value (右对齐)
-            // ★★★ 修复：统一使用 Item 字体 (即标签字体)，与任务栏保持一致 ★★★
+            // ★★★ 单字体：与任务栏一致，标签/数值同字体同字号 ★★★
             TextRenderer.DrawText(
                 g,
                 value,
-                t.FontValue,
+                t.FontItem,
                 rc,
                 valColor,
                 TextFormatFlags.Right | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding

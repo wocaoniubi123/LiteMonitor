@@ -40,7 +40,7 @@ namespace LiteMonitor
             _padding = t.Layout.Padding;
 
             if (mode == LayoutMode.Horizontal)
-                _rowH = Math.Max(t.FontItem.Height, t.FontValue.Height);
+                _rowH = t.FontItem.Height; // 单字体：横条标签/数值统一用 Item 字体
             else
                 _rowH = 0; // 任务栏模式稍后根据 taskbarHeight 决定
 
@@ -226,7 +226,7 @@ namespace LiteMonitor
                 else
                 {
                     labelFont = _t.FontItem;
-                    valueFont = _t.FontValue;
+                    valueFont = _t.FontItem; // 单字体：与任务栏一致
                 }
 
                 try
