@@ -304,54 +304,59 @@ namespace LiteMonitor
 
         private string GenerateSampleText(MetricItem item)
         {
-            // 1. 优先获取 TextValue
-            string val = item.TextValue ?? "";
-            
-            // ★★★ 优化：直接调用 GetUnitStr 获取默认单位 ★★★
-            // 无论是硬件(°C) 还是 插件(从InfoService查)，这里都能统一拿到了
-            string rawUnit = MetricUtils.GetUnitStr(item.Key, 0, MetricUtils.UnitContext.Taskbar);
-
-            // 2. 硬件监控项的特殊处理（如果没有 TextValue 且不是插件项，则使用硬件估算逻辑）
-            if (string.IsNullOrEmpty(val) && !item.Key.StartsWith("DASH.", StringComparison.OrdinalIgnoreCase))
+            // 任务栏保持原逻辑：固定样本 + 强制 MB，避免宽度随网速单位跳动。
+            if (_mode == LayoutMode.Taskbar)
             {
-                val = MetricUtils.GetSampleValueStr(item.Key);
+                string val = item.TextValue ?? "";
+                string rawUnit = MetricUtils.GetUnitStr(item.Key, 0, MetricUtils.UnitContext.Taskbar);
 
-                // [特殊保留] 网速/硬盘仍需强制 "MB"，防止 GetUnitStr 返回 "KB" 导致宽度不够出现抖动
-                var type = MetricUtils.GetType(item.Key);
-                if (type == MetricType.DataSpeed || type == MetricType.DataSize)
+                if (string.IsNullOrEmpty(val) && !item.Key.StartsWith("DASH.", StringComparison.OrdinalIgnoreCase))
                 {
-                    rawUnit = "MB"; 
-                }
-            }
+                    val = MetricUtils.GetSampleValueStr(item.Key);
 
-            // 2. 处理显示单位 (叠加用户配置)
-            string userFmt = item.BoundConfig?.UnitTaskbar;
-            string unit = MetricUtils.GetDisplayUnit(item.Key, rawUnit, userFmt);
-
-            // 3. 拼接并生成样本 (将所有数字替换为 '0')
-            // [Optimization] 使用 string.Create 避免中间数组分配 (Net 8.0+)
-            bool appendUnit = !string.IsNullOrEmpty(unit) && !val.EndsWith(unit);
-            int totalLen = val.Length + (appendUnit ? unit.Length : 0);
-            
-            return string.Create(totalLen, (val, unit, appendUnit), (span, state) =>
-            {
-                var (v, u, append) = state;
-                int pos = 0;
-                
-                // 写入数值部分 (数字转0)
-                foreach (char c in v)
-                {
-                    span[pos++] = char.IsDigit(c) ? '0' : c;
-                }
-                
-                // 写入单位部分
-                if (append)
-                {
-                    foreach (char c in u)
+                    var type = MetricUtils.GetType(item.Key);
+                    if (type == MetricType.DataSpeed || type == MetricType.DataSize)
                     {
-                        span[pos++] = char.IsDigit(c) ? '0' : c; 
+                        rawUnit = "MB";
                     }
                 }
+
+                string userFmt = item.BoundConfig?.UnitTaskbar;
+                string unit = MetricUtils.GetDisplayUnit(item.Key, rawUnit, userFmt);
+
+                bool appendUnit = !string.IsNullOrEmpty(unit) && !val.EndsWith(unit);
+                int totalLen = val.Length + (appendUnit ? unit.Length : 0);
+
+                return string.Create(totalLen, (val, unit, appendUnit), (span, state) =>
+                {
+                    var (v, u, append) = state;
+                    int pos = 0;
+
+                    foreach (char c in v)
+                    {
+                        span[pos++] = char.IsDigit(c) ? '0' : c;
+                    }
+
+                    if (append)
+                    {
+                        foreach (char c in u)
+                        {
+                            span[pos++] = char.IsDigit(c) ? '0' : c;
+                        }
+                    }
+                });
+            }
+
+            // 横条：用“当前实际要绘制的文本”测量列宽（数字统一换成 0，保持宽度稳定）。
+            // 不再用固定 MB 样本：否则实际单位是 MB 时列宽刚好用满、只剩 inner spacing，
+            // 实际单位是 KB 时又白捡一段余量，导致上下行间距不一致。
+            string valH = item.GetFormattedText(true);
+            if (string.IsNullOrEmpty(valH)) return "0";
+
+            return string.Create(valH.Length, valH, (span, v) =>
+            {
+                for (int i = 0; i < v.Length; i++)
+                    span[i] = char.IsDigit(v[i]) ? '0' : v[i];
             });
         }
 
