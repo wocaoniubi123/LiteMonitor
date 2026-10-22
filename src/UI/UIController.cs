@@ -98,6 +98,7 @@ namespace LiteMonitor
             TaskbarRenderer.ReloadStyle(_cfg);
 
             _layout = new UILayout(t);
+            _hxLayout?.Dispose();
             _hxLayout = null;
 
             if (!retainData)
@@ -141,7 +142,7 @@ namespace LiteMonitor
             // === 横屏模式 ===
             if (_cfg.HorizontalMode)
             {
-                _hxLayout ??= new HorizontalLayout(t, _form.Width, LayoutMode.Horizontal);
+                _hxLayout ??= new HorizontalLayout(t, _form.Width, LayoutMode.Horizontal, _cfg);
 
                 // [通用方案] 动态检测是否需要重新计算布局
                 // 移至 Tick() 中低频检查，避免 Render 高频调用
@@ -154,7 +155,7 @@ namespace LiteMonitor
                     _form.ClientSize = new Size(_hxLayout.PanelWidth, h);
                     _layoutDirty = false;
                 }
-                HorizontalRenderer.Render(g, t, _hxColsHorizontal, _hxLayout.PanelWidth);
+                HorizontalRenderer.Render(g, t, _hxColsHorizontal, _hxLayout.PanelWidth, _hxLayout.LabelFont, _hxLayout.ValueFont);
                 return;
             }
 
@@ -509,6 +510,7 @@ namespace LiteMonitor
             _timer.Stop();
             _timer.Dispose();
             _mon.Dispose();
+            _hxLayout?.Dispose();
         }
     }
 }

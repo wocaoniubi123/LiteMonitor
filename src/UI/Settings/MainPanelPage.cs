@@ -136,7 +136,16 @@ namespace LiteMonitor.src.UI.SettingsPage
                 () => Config.HorizontalHeight,
                 v => Config.HorizontalHeight = v);
 
-            // 4. Spacing
+            // 4. Font sizes (0 = follow theme)
+            groupHorz.AddDouble(this, "Menu.HorizontalLabelFontSize", "pt",
+                () => Config.HorizontalLabelFontSize,
+                v => Config.HorizontalLabelFontSize = v);
+
+            groupHorz.AddDouble(this, "Menu.HorizontalValueFontSize", "pt",
+                () => Config.HorizontalValueFontSize,
+                v => Config.HorizontalValueFontSize = v);
+
+            // 5. Spacing
             groupHorz.AddInt(this, "Menu.TaskbarItemSpacing", "px",
                 () => Config.HorizontalItemSpacing,
                 v => Config.HorizontalItemSpacing = v);

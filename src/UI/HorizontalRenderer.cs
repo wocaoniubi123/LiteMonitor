@@ -12,7 +12,7 @@ namespace LiteMonitor
     /// </summary>
     public static class HorizontalRenderer
     {
-        public static void Render(Graphics g, Theme t, List<Column> cols, int panelWidth)
+        public static void Render(Graphics g, Theme t, List<Column> cols, int panelWidth, Font labelFont, Font valueFont)
         {
             int panelHeight = (int)g.VisibleClipBounds.Height;
 
@@ -20,10 +20,10 @@ namespace LiteMonitor
                 g.FillRectangle(bg, new Rectangle(0, 0, panelWidth, panelHeight));
 
             foreach (var col in cols)
-                DrawColumn(g, col, t);
+                DrawColumn(g, col, t, labelFont, valueFont);
         }
 
-        private static void DrawColumn(Graphics g, Column col, Theme t)
+        private static void DrawColumn(Graphics g, Column col, Theme t, Font labelFont, Font valueFont)
         {
             if (col.Bounds == Rectangle.Empty) return;
 
@@ -33,17 +33,17 @@ namespace LiteMonitor
             // 1. 绘制 Top
             if (col.BoundsTop != Rectangle.Empty && col.Top != null)
             {
-                DrawItem(g, col.Top, col.BoundsTop, t);
+                DrawItem(g, col.Top, col.BoundsTop, t, labelFont, valueFont);
             }
 
             // 2. 绘制 Bottom
             if (col.BoundsBottom != Rectangle.Empty && col.Bottom != null)
             {
-                DrawItem(g, col.Bottom, col.BoundsBottom, t);
+                DrawItem(g, col.Bottom, col.BoundsBottom, t, labelFont, valueFont);
             }
         }
 
-        private static void DrawItem(Graphics g, MetricItem it, Rectangle rc, Theme t)
+        private static void DrawItem(Graphics g, MetricItem it, Rectangle rc, Theme t, Font labelFont, Font valueFont)
         {
             // 使用 MetricItem 统一格式化 (横屏模式=true)
             string value = it.GetFormattedText(true);
@@ -60,7 +60,7 @@ namespace LiteMonitor
                 TextRenderer.DrawText(
                     g,
                     value,
-                    t.FontItem,
+                    valueFont,
                     rc,
                     valColor,
                     TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding
@@ -77,18 +77,17 @@ namespace LiteMonitor
             TextRenderer.DrawText(
                 g,
                 label,
-                t.FontItem,
+                labelFont,
                 rc,
                 ThemeManager.ParseColor(t.Color.TextPrimary),
                 TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding
             );
 
-            // Value (右对齐)
-            // ★★★ 单字体：与任务栏一致，标签/数值同字体同字号 ★★★
+            // Value (右对齐) —— 字号可独立设置
             TextRenderer.DrawText(
                 g,
                 value,
-                t.FontItem,
+                valueFont,
                 rc,
                 valColor,
                 TextFormatFlags.Right | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding

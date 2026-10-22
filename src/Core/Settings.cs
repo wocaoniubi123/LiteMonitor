@@ -74,6 +74,8 @@ namespace LiteMonitor
         public int HorizontalInnerSpacing { get; set; } = 8;  // 标签与值间距 (默认 8)
         public bool HorizontalSingleLine { get; set; } = false; // [新增] 横条模式单行显示
         public int HorizontalHeight { get; set; } = 0; // 横条高度 (px, 0=自动跟随字体)
+        public double HorizontalLabelFontSize { get; set; } = 0; // 横条参数名字号 (pt, 0=跟随主题)
+        public double HorizontalValueFontSize { get; set; } = 0; // 横条参数数值字号 (pt, 0=跟随主题)
 
         // ★★★ 常量定义：用于 GetStyle 中的默认策略 ★★★
         public const string DEFAULT_TB_FONT = "Microsoft YaHei UI"; // 任务栏默认字体（兼容多语言环境，系统自带）

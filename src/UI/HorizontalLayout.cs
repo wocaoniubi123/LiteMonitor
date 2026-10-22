@@ -12,7 +12,7 @@ namespace LiteMonitor
         Taskbar
     }
 
-    public class HorizontalLayout
+    public class HorizontalLayout : IDisposable
     {
         private readonly Theme _t;
         private readonly LayoutMode _mode;
@@ -21,10 +21,17 @@ namespace LiteMonitor
         private readonly int _padding;
         private int _rowH;
 
+        // 横条独立字体（标签/数值可分别调字号；任务栏模式不使用）
+        private Font? _labelFont;
+        private Font? _valueFont;
+
         // DPI
         private readonly float _dpiScale;
 
         public int PanelWidth { get; private set; }
+
+        public Font LabelFont => _labelFont ?? _t.FontItem;
+        public Font ValueFont => _valueFont ?? _t.FontValue;
 
         public HorizontalLayout(Theme t, int initialWidth, LayoutMode mode, Settings? settings = null)
         {
@@ -38,12 +45,21 @@ namespace LiteMonitor
 
                 if (mode == LayoutMode.Horizontal)
                 {
-                    // 单字体：行高按实际字形测量。Font.Height(12) 小于 TextRenderer 实际所需高度(15)，
-                    // 直接用它做行高会把中文/长数字的上下伸部裁掉。
-                    _rowH = Math.Max(t.FontItem.Height,
-                        TextRenderer.MeasureText(g, "国", t.FontItem,
-                            new Size(int.MaxValue, int.MaxValue),
-                            TextFormatFlags.NoPadding).Height);
+                    // 横条字体：0=跟随主题标签字体；可分别指定参数名/参数数值字号(pt)
+                    double baseSize = t.FontItem.SizeInPoints;
+                    double labelPt = _settings.HorizontalLabelFontSize > 0 ? _settings.HorizontalLabelFontSize : baseSize;
+                    double valuePt = _settings.HorizontalValueFontSize > 0 ? _settings.HorizontalValueFontSize : baseSize;
+                    labelPt = Math.Clamp(labelPt, 5.0, 72.0);
+                    valuePt = Math.Clamp(valuePt, 5.0, 72.0);
+
+                    _labelFont = new Font(t.FontItem.FontFamily, (float)labelPt, t.FontItem.Style);
+                    _valueFont = new Font(t.FontItem.FontFamily, (float)valuePt, t.FontItem.Style);
+
+                    // 行高按实际字形测量。Font.Height 小于 TextRenderer 实际所需高度，直接用会裁掉上下伸部。
+                    int MeasureH(Font f) => TextRenderer.MeasureText(g, "国", f,
+                        new Size(int.MaxValue, int.MaxValue), TextFormatFlags.NoPadding).Height;
+
+                    _rowH = Math.Max(MeasureH(_labelFont), MeasureH(_valueFont));
                 }
                 else
                 {
@@ -54,6 +70,14 @@ namespace LiteMonitor
             _padding = t.Layout.Padding;
 
             PanelWidth = initialWidth;
+        }
+
+        public void Dispose()
+        {
+            _labelFont?.Dispose();
+            _valueFont?.Dispose();
+            _labelFont = null;
+            _valueFont = null;
         }
 
         /// <summary>
@@ -200,7 +224,7 @@ namespace LiteMonitor
                 }
                 else
                 {
-                    valFont = _t.FontItem;
+                    valFont = ValueFont;
                 }
 
                 try
@@ -234,8 +258,8 @@ namespace LiteMonitor
                 }
                 else
                 {
-                    labelFont = _t.FontItem;
-                    valueFont = _t.FontItem; // 单字体：与任务栏一致
+                    labelFont = LabelFont;
+                    valueFont = ValueFont; // 横条标签/数值可分别设字号
                 }
 
                 try
