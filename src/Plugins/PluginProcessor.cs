@@ -277,9 +277,49 @@ namespace LiteMonitor.src.Plugins
                 {
                     return value;
                 }
-                
+
+                // 内置时间变量：每次求值现算，保证跨过 0 点后日期会翻
+                if (TryResolveBuiltin(content, out string builtin))
+                {
+                    return builtin;
+                }
+
                 return "";
             });
+        }
+
+        /// <summary>
+        /// 内置时间变量（插件模板可直接引用，无需在 inputs 里声明）：
+        /// __today__  本地日期 yyyy-MM-dd
+        /// __now__    本地时间 yyyy-MM-ddTHH:mm:ss
+        /// __now_ms__ 本地时间 yyyy-MM-ddTHH:mm:ss.fff
+        /// __unix__   当前 Unix 时间戳（秒）
+        /// __utc__    UTC 时间 yyyy-MM-ddTHH:mm:ssZ
+        /// </summary>
+        private static bool TryResolveBuiltin(string name, out string value)
+        {
+            DateTime now = DateTime.Now;
+            switch (name)
+            {
+                case "__today__":
+                    value = now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+                    return true;
+                case "__now__":
+                    value = now.ToString("yyyy-MM-dd'T'HH:mm:ss", CultureInfo.InvariantCulture);
+                    return true;
+                case "__now_ms__":
+                    value = now.ToString("yyyy-MM-dd'T'HH:mm:ss.fff", CultureInfo.InvariantCulture);
+                    return true;
+                case "__unix__":
+                    value = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
+                    return true;
+                case "__utc__":
+                    value = DateTime.UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
+                    return true;
+                default:
+                    value = "";
+                    return false;
+            }
         }
     }
 }
