@@ -290,11 +290,12 @@ namespace LiteMonitor.src.Plugins
 
         /// <summary>
         /// 内置时间变量（插件模板可直接引用，无需在 inputs 里声明）：
-        /// __today__  本地日期 yyyy-MM-dd
-        /// __now__    本地时间 yyyy-MM-ddTHH:mm:ss
-        /// __now_ms__ 本地时间 yyyy-MM-ddTHH:mm:ss.fff
-        /// __unix__   当前 Unix 时间戳（秒）
-        /// __utc__    UTC 时间 yyyy-MM-ddTHH:mm:ssZ
+        /// __today__        本地日期 yyyy-MM-dd
+        /// __today_start__  本地当天 0 点，换算成 UTC 的 ISO 时间（yyyy-MM-ddTHH:mm:ssZ）
+        /// __now__          本地时间 yyyy-MM-ddTHH:mm:ss
+        /// __now_ms__       本地时间 yyyy-MM-ddTHH:mm:ss.fff
+        /// __unix__         当前 Unix 时间戳（秒）
+        /// __utc__          UTC 时间 yyyy-MM-ddTHH:mm:ssZ
         /// </summary>
         private static bool TryResolveBuiltin(string name, out string value)
         {
@@ -303,6 +304,13 @@ namespace LiteMonitor.src.Plugins
             {
                 case "__today__":
                     value = now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+                    return true;
+                case "__today_start__":
+                    // 本地当天 0 点 → UTC。部分服务端会把纯日期当成 UTC 0 点，
+                    // 直接用纯日期会让东八区少算 8 小时（0:00~8:00 的数据全丢）。
+                    DateTime localMidnight = now.Date;
+                    value = localMidnight.ToUniversalTime()
+                        .ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
                     return true;
                 case "__now__":
                     value = now.ToString("yyyy-MM-dd'T'HH:mm:ss", CultureInfo.InvariantCulture);
