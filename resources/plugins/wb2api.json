@@ -1,0 +1,239 @@
+{
+  "id": "wb2api",
+  "meta": {
+    "name": "wb2api",
+    "version": "1.2",
+    "author": "wocaoniubi123",
+    "description": "wb2api 管理后台(8790)：积分(可用/总额度) / 消耗(今日总消费) / 总Token / 连接(正在处理路数)"
+  },
+  "inputs": [
+    {
+      "key": "admin_user",
+      "label": "后台账号",
+      "type": "text",
+      "scope": "global",
+      "placeholder": "admin",
+      "default": "admin"
+    },
+    {
+      "key": "admin_pass",
+      "label": "后台密码",
+      "type": "password",
+      "scope": "global",
+      "placeholder": "登录密码",
+      "default": "1"
+    }
+  ],
+  "execution": {
+    "type": "chain",
+    "interval": 5,
+    "steps": [
+      {
+        "id": "login",
+        "url": "http://127.0.0.1:8790/api/login",
+        "method": "POST",
+        "body": "username={{admin_user}}&password={{admin_pass}}",
+        "content_type": "application/x-www-form-urlencoded",
+        "cache_minutes": 60,
+        "extract": {
+          "admin_token": "token"
+        }
+      },
+      {
+        "id": "acct",
+        "url": "http://127.0.0.1:8790/api/overview?days=1",
+        "method": "GET",
+        "headers": { "X-Admin-Token": "{{admin_token}}" },
+        "extract": {
+          "remain": "accounts.balance_remain",
+          "total": "accounts.balance_total",
+          "used": "today.credits",
+          "tok_raw": "today.total_tokens"
+        },
+        "process": [
+          {
+            "var": "used",
+            "source": "used",
+            "function": "round",
+            "to": "2"
+          },
+          {
+            "var": "tok_a",
+            "source": "tok_raw",
+            "function": "regex_replace",
+            "pattern": "^(\\d)$",
+            "to": "000$1"
+          },
+          {
+            "var": "tok_a",
+            "source": "tok_a",
+            "function": "regex_replace",
+            "pattern": "^(\\d{2})$",
+            "to": "00$1"
+          },
+          {
+            "var": "tok_a",
+            "source": "tok_a",
+            "function": "regex_replace",
+            "pattern": "^(\\d{3})$",
+            "to": "0$1"
+          },
+          {
+            "var": "tok_a",
+            "source": "tok_a",
+            "function": "regex_replace",
+            "pattern": "^(\\d+)(\\d{8})$",
+            "to": "$1.$2"
+          },
+          {
+            "var": "tok_a",
+            "source": "tok_a",
+            "function": "regex_replace",
+            "pattern": "^(\\d{4})$",
+            "to": "0.$1"
+          },
+          {
+            "var": "tok_a",
+            "source": "tok_a",
+            "function": "regex_replace",
+            "pattern": "^(\\d+)(\\d{4})$",
+            "to": "$1.$2"
+          },
+          {
+            "var": "yiFlag",
+            "source": "tok_raw",
+            "function": "regex_match",
+            "pattern": "^\\d{9,}",
+            "to": "0"
+          },
+          {
+            "var": "tok_ip",
+            "source": "tok_a",
+            "function": "regex_match",
+            "pattern": "^(\\d+)",
+            "to": "1"
+          },
+          {
+            "var": "tok_dec2",
+            "source": "tok_a",
+            "function": "regex_match",
+            "pattern": "^\\d+\\.(\\d{2})",
+            "to": "1"
+          },
+          {
+            "var": "tok_d3",
+            "source": "tok_a",
+            "function": "regex_match",
+            "pattern": "^\\d+\\.\\d{2}(\\d)",
+            "to": "1"
+          },
+          {
+            "var": "tok_carry",
+            "source": "tok_d3",
+            "function": "map",
+            "map": {
+              "0": "", "1": "", "2": "", "3": "", "4": "",
+              "5": "X", "6": "X", "7": "X", "8": "X", "9": "X"
+            }
+          },
+          {
+            "var": "tok_dec2i",
+            "source": "tok_dec2",
+            "function": "map",
+            "map": {
+              "00":"01", "01":"02", "02":"03", "03":"04", "04":"05",
+              "05":"06", "06":"07", "07":"08", "08":"09", "09":"10",
+              "10":"11", "11":"12", "12":"13", "13":"14", "14":"15",
+              "15":"16", "16":"17", "17":"18", "18":"19", "19":"20",
+              "20":"21", "21":"22", "22":"23", "23":"24", "24":"25",
+              "25":"26", "26":"27", "27":"28", "28":"29", "29":"30",
+              "30":"31", "31":"32", "32":"33", "33":"34", "34":"35",
+              "35":"36", "36":"37", "37":"38", "38":"39", "39":"40",
+              "40":"41", "41":"42", "42":"43", "43":"44", "44":"45",
+              "45":"46", "46":"47", "47":"48", "48":"49", "49":"50",
+              "50":"51", "51":"52", "52":"53", "53":"54", "54":"55",
+              "55":"56", "56":"57", "57":"58", "58":"59", "59":"60",
+              "60":"61", "61":"62", "62":"63", "63":"64", "64":"65",
+              "65":"66", "66":"67", "67":"68", "68":"69", "69":"70",
+              "70":"71", "71":"72", "72":"73", "73":"74", "74":"75",
+              "75":"76", "76":"77", "77":"78", "78":"79", "79":"80",
+              "80":"81", "81":"82", "82":"83", "83":"84", "84":"85",
+              "85":"86", "86":"87", "87":"88", "88":"89", "89":"90",
+              "90":"91", "91":"92", "92":"93", "93":"94", "94":"95",
+              "95":"96", "96":"97", "97":"98", "98":"99", "99":"99"
+            }
+          },
+          {
+            "var": "tok_dec_sel",
+            "source": "tok_ip",
+            "function": "regex_replace",
+            "pattern": "^(.+)$",
+            "to": "{{tok_carry ? tok_dec2i : tok_dec2}}"
+          },
+          {
+            "var": "tok_dec_dot",
+            "source": "tok_dec_sel",
+            "function": "regex_replace",
+            "pattern": "^(\\d{2})$",
+            "to": ".$1"
+          },
+          {
+            "var": "tok",
+            "source": "tok_a",
+            "function": "regex_replace",
+            "pattern": "^\\d+\\.\\d+$",
+            "to": "{{tok_ip}}{{tok_dec_dot}}{{yiFlag ? '亿' : '万'}}"
+          }
+        ]
+      },
+      {
+        "id": "live",
+        "url": "http://127.0.0.1:8790/api/sentinel/traffic?window=3600",
+        "method": "GET",
+        "headers": { "X-Admin-Token": "{{admin_token}}" },
+        "extract": {
+          "active": "running"
+        },
+        "process": [
+          {
+            "var": "link_color",
+            "source": "active",
+            "function": "threshold_switch",
+            "value_map": { "0": "1", "1": "0" }
+          }
+        ]
+      }
+    ]
+  },
+  "outputs": [
+    {
+      "key": "quota",
+      "label": "积分",
+      "short_label": "积分",
+      "format_val": "{{remain ?? '-'}}/{{total ?? '-'}}",
+      "keep_on_error": true
+    },
+    {
+      "key": "cost",
+      "label": "消耗",
+      "short_label": "消耗",
+      "format_val": "{{used ?? '-'}}",
+      "keep_on_error": true
+    },
+    {
+      "key": "tok",
+      "label": "总 Token",
+      "short_label": "Tok",
+      "format_val": "{{tok ?? '-'}}",
+      "keep_on_error": true
+    },
+    {
+      "key": "link",
+      "label": "连接",
+      "short_label": "连接",
+      "format_val": "{{active ?? '-'}}",
+      "color": "{{link_color}}",
+      "keep_on_error": true
+    }
+  ]
+}

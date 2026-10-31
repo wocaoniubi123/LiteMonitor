@@ -82,7 +82,9 @@ namespace LiteMonitor.src.UI.Helpers
 
         private void StartTopMostTimer()
         {
-            _topMostTimer ??= new System.Windows.Forms.Timer { Interval = 10000 };
+            // 1 秒一次：窗口被「显示桌面」压到下面后要能立刻抢回来，
+            // 10 秒的旧值意味着用户盯着消失的窗口等十秒。
+            _topMostTimer ??= new System.Windows.Forms.Timer { Interval = 1000 };
             _topMostTimer.Tick -= TopMostTick;
             _topMostTimer.Tick += TopMostTick;
             _topMostTimer.Start();
@@ -94,7 +96,9 @@ namespace LiteMonitor.src.UI.Helpers
 
             if (_cfg.TopMost)
             {
-                if (!_winHelper.IsTopMostStyleApplied())
+                // 样式位还在 ≠ 真的在最上层。点「显示桌面」后系统只把桌面提到我们前面，
+                // 不剥 TOPMOST 位，所以必须查真实 Z 序，否则窗口卡在下面再也回不来。
+                if (!_winHelper.IsTopMostStyleApplied() || !_winHelper.IsTopMostReallyOnTop())
                 {
                     _winHelper.RefreshTopMost(true, forceReinsert: true);
                 }

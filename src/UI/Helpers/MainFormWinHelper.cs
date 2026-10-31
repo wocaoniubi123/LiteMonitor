@@ -65,6 +65,50 @@ namespace LiteMonitor.src.UI.Helpers
             }
         }
 
+        /// <summary>
+        /// 窗口是否真的还在最上层（而不是只带着 WS_EX_TOPMOST 样式位）。
+        ///
+        /// 为什么要单开一个方法：点任务栏「显示桌面」时，系统不会剥掉 TOPMOST
+        /// 样式位，只是把桌面窗口提到我们上面。此时 IsTopMostStyleApplied()
+        /// 依然返回 true，定时器就永远判定「已置顶」而不动作 —— 窗口卡在下面
+        /// 再也不回来，只能靠切程序重排 Z 序救回来。
+        ///
+        /// 非 TOPMOST 窗口不可能排在 TOPMOST 窗口之上，所以只需看「我们上面
+        /// 有没有另一个可见的 TOPMOST 窗口，且它压在我们身上」。
+        /// </summary>
+        public bool IsTopMostReallyOnTop()
+        {
+            try
+            {
+                if (_form.IsDisposed || !_form.IsHandleCreated || !_form.Visible) return false;
+
+                if (!GetWindowRect(_form.Handle, out RECT self)) return false;
+                var selfRect = new Rectangle(self.Left, self.Top, self.Right - self.Left, self.Bottom - self.Top);
+
+                IntPtr hWnd = GetTopWindow(IntPtr.Zero);
+                while (hWnd != IntPtr.Zero)
+                {
+                    if (hWnd == _form.Handle) return true; // 走到自己 = 上面没有别的置顶窗
+
+                    if (IsWindowVisible(hWnd) && (GetWindowLong(hWnd, GWL_EXSTYLE) & WS_EX_TOPMOST) != 0)
+                    {
+                        if (GetWindowRect(hWnd, out RECT other))
+                        {
+                            var otherRect = new Rectangle(other.Left, other.Top, other.Right - other.Left, other.Bottom - other.Top);
+                            if (otherRect.IntersectsWith(selfRect)) return false;
+                        }
+                    }
+
+                    hWnd = GetWindow(hWnd, GW_HWNDNEXT);
+                }
+                return false;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         public void RefreshTopMost(bool enabled, bool forceReinsert = false)
         {
             try
@@ -189,6 +233,14 @@ namespace LiteMonitor.src.UI.Helpers
             }
             return msgId;
         }
+
+        [DllImport("user32.dll")] private static extern IntPtr GetTopWindow(IntPtr hWnd);
+        [DllImport("user32.dll")] private static extern IntPtr GetWindow(IntPtr hWnd, uint uCmd);
+        [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool IsWindowVisible(IntPtr hWnd);
+        [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+        [StructLayout(LayoutKind.Sequential)]
+        private struct RECT { public int Left, Top, Right, Bottom; }
+        private const uint GW_HWNDNEXT = 2;
 
         [DllImport("dwmapi.dll")] private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
         [DllImport("user32.dll", SetLastError = true)] private static extern int GetWindowLong(IntPtr hWnd, int nIndex);

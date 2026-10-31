@@ -134,6 +134,11 @@ namespace LiteMonitor.src.Plugins
         [JsonPropertyName("headers")]
         public Dictionary<string, string>? Headers { get; set; }
 
+        // POST body 的 Content-Type。默认 application/json 保持旧模板行为不变；
+        // 表单型登录接口（如 MiraiHub /api/login）必须显式写 application/x-www-form-urlencoded。
+        [JsonPropertyName("content_type")]
+        public string ContentType { get; set; } = "application/json";
+
         [JsonPropertyName("response_encoding")]
         public string ResponseEncoding { get; set; } = "utf-8"; // utf-8, gbk
 

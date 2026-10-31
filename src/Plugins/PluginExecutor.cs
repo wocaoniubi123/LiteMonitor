@@ -207,7 +207,7 @@ namespace LiteMonitor.src.Plugins
                     // For simplicity and backward compatibility, we execute directly here but reuse Fetch helper
                     var sw = System.Diagnostics.Stopwatch.StartNew();
                     var resolvedHeaders = ResolveHeaders(step.Headers, inputs);
-                    resultRaw = await FetchRawAsync(step.Method, url, body, resolvedHeaders, step.ResponseEncoding, token);
+                    resultRaw = await FetchRawAsync(step.Method, url, body, resolvedHeaders, step.ResponseEncoding, token, null, step.ContentType);
                     sw.Stop();
                     inputs["__latency__"] = sw.ElapsedMilliseconds.ToString();
                 }
@@ -323,7 +323,7 @@ namespace LiteMonitor.src.Plugins
                         var resolvedHeaders = ResolveHeaders(step.Headers, context);
                         
                         // Request Coalescing
-                        var task = _inflightRequests.GetOrAdd(cacheKey, _ => FetchRawAsync(step.Method, url, body, resolvedHeaders, step.ResponseEncoding, CancellationToken.None, proxy));     
+                        var task = _inflightRequests.GetOrAdd(cacheKey, _ => FetchRawAsync(step.Method, url, body, resolvedHeaders, step.ResponseEncoding, CancellationToken.None, proxy, step.ContentType));     
                         
                         try 
                         {
@@ -490,7 +490,7 @@ namespace LiteMonitor.src.Plugins
             throw new Exception($"Unknown native host: {uri.Host}");
         }
 
-        private async Task<string> FetchRawAsync(string methodStr, string url, string body, Dictionary<string, string> headers, string encoding, System.Threading.CancellationToken token, string proxy = null)
+        private async Task<string> FetchRawAsync(string methodStr, string url, string body, Dictionary<string, string> headers, string encoding, System.Threading.CancellationToken token, string proxy = null, string contentType = "application/json")
         {
             HttpMethod method = HttpMethod.Get;
             if (methodStr?.ToUpper() == "POST") method = HttpMethod.Post;
@@ -501,7 +501,12 @@ namespace LiteMonitor.src.Plugins
             using var request = new HttpRequestMessage(method, url);
             if (method == HttpMethod.Post && !string.IsNullOrEmpty(body))
             {
-                request.Content = new StringContent(body, Encoding.UTF8, "application/json");
+                // 表单接口要求 x-www-form-urlencoded；用 FormUrlEncodedContent 的话
+                // body 必须是键值对，这里只是一个原样字符串，所以手动指定 Content-Type。
+                string ct = string.IsNullOrWhiteSpace(contentType) ? "application/json" : contentType.Trim();
+                var content = new StringContent(body, Encoding.UTF8);
+                content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(ct);
+                request.Content = content;
             }
             if (headers != null)
             {
