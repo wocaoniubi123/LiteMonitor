@@ -196,11 +196,11 @@
       },
       {
         "id": "live",
-        "url": "http://127.0.0.1:8790/api/sentinel/traffic?window=3600",
+        "url": "http://127.0.0.1:8790/api/keys",
         "method": "GET",
-        "headers": { "X-Admin-Token": "{{admin_token}}" },
+        "headers": { "X-Admin-Token": "{{admin_token}}", "X-Platform": "{{platform}}" },
         "extract": {
-          "active": "running"
+          "active": "items[*].ip_summary.active_requests|sum"
         },
         "process": [
           {

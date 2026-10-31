@@ -17,55 +17,126 @@ namespace LiteMonitor.src.Plugins
 
         /// <summary>
         /// 从 JSON 对象中提取值
-        /// 支持路径语法: "data.current.temp" 或 "list[0].id"
+        /// 支持路径语法: "data.current.temp" / "list[0].id"
+        ///
+        /// 扩展：数组通配 + 求和
+        ///   "items[*].ip_summary.active_requests|sum"
+        ///   [*] 展开数组每个元素，|sum 把命中的数字加总。
+        ///   不带 |sum 时 [*] 等价于 [0]（取第一个元素），保持向后兼容。
         /// </summary>
         public static string ExtractJsonValue(JsonElement root, string path)
         {
             try
             {
-                var current = root;
-                // [Optimization] Avoid frequent Split if path is simple
-                if (!path.Contains('.') && !path.Contains('[')) 
+                if (string.IsNullOrWhiteSpace(path)) return PluginConstants.STATUS_UNKNOWN;
+
+                string p = path.Trim();
+
+                // 1. 剥离 |sum 后缀
+                bool wantSum = false;
+                int pipeIdx = p.LastIndexOf('|');
+                if (pipeIdx > 0 && p.Substring(pipeIdx + 1).Trim().Equals("sum", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (current.ValueKind == JsonValueKind.Object && current.TryGetProperty(path, out var prop))
-                        return JsonElementToString(prop);
-                    return PluginConstants.STATUS_UNKNOWN;
+                    wantSum = true;
+                    p = p.Substring(0, pipeIdx).Trim();
                 }
 
-                var parts = path.Split('.');
-
-                foreach (var part in parts)
+                // 2. [*] 通配：先导航到数组，再逐元素取尾路径
+                int wild = p.IndexOf("[*]", StringComparison.Ordinal);
+                if (wild >= 0)
                 {
-                    if (part.Contains("[") && part.EndsWith("]"))
-                    {
-                        // Handle Array Index: list[0]
-                        int idxStart = part.IndexOf('[');
-                        string name = part.Substring(0, idxStart);
-                        
-                        // Parse index (fast span-like logic not available in .NET Framework / Standard 2.0 easily, keep substring)
-                        if (!int.TryParse(part.Substring(idxStart + 1, part.Length - idxStart - 2), out int index)) return PluginConstants.STATUS_UNKNOWN;
+                    string headPath = p.Substring(0, wild);
+                    string tailPath = p.Substring(wild + 3).TrimStart('.');
 
-                        if (!string.IsNullOrEmpty(name))
+                    if (!TryNavigatePath(root, headPath, out var arr)) return PluginConstants.STATUS_UNKNOWN;
+                    if (arr.ValueKind != JsonValueKind.Array) return PluginConstants.STATUS_UNKNOWN;
+
+                    int count = arr.GetArrayLength();
+                    if (count == 0) return PluginConstants.STATUS_UNKNOWN;
+
+                    // 无 |sum：取首个元素，等价于 [0]
+                    if (!wantSum)
+                    {
+                        if (!TryNavigatePath(arr[0], tailPath, out var first)) return PluginConstants.STATUS_UNKNOWN;
+                        return JsonElementToString(first);
+                    }
+
+                    decimal sum = 0;
+                    int counted = 0;
+                    for (int i = 0; i < count; i++)
+                    {
+                        JsonElement v;
+                        if (tailPath.Length == 0)
                         {
-                            if (current.ValueKind != JsonValueKind.Object || !current.TryGetProperty(name, out current)) return PluginConstants.STATUS_UNKNOWN;
+                            v = arr[i]; // 直接对数字数组求和
                         }
-                        
-                        if (current.ValueKind != JsonValueKind.Array || index >= current.GetArrayLength()) return PluginConstants.STATUS_UNKNOWN;
-                        current = current[index];
+                        else if (!TryNavigatePath(arr[i], tailPath, out v))
+                        {
+                            continue; // 单个元素缺字段：跳过，不中断整体
+                        }
+
+                        if (v.ValueKind == JsonValueKind.Number)
+                        {
+                            if (v.TryGetDecimal(out decimal dn)) { sum += dn; counted++; }
+                        }
+                        else if (v.ValueKind == JsonValueKind.String &&
+                                 decimal.TryParse(v.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out decimal ds))
+                        {
+                            sum += ds;
+                            counted++;
+                        }
                     }
-                    else
-                    {
-                        // Handle Object Property
-                        if (current.ValueKind != JsonValueKind.Object || !current.TryGetProperty(part, out current)) return PluginConstants.STATUS_UNKNOWN;
-                    }
+
+                    // 一个有效数字都没有：当作取不到，让上层走失败分支而不是显示 0
+                    if (counted == 0) return PluginConstants.STATUS_UNKNOWN;
+                    return sum.ToString(CultureInfo.InvariantCulture);
                 }
 
-                return JsonElementToString(current);
+                // 3. 普通路径
+                if (!TryNavigatePath(root, p, out var node)) return PluginConstants.STATUS_UNKNOWN;
+                return JsonElementToString(node);
             }
             catch
             {
                 return PluginConstants.STATUS_UNKNOWN;
             }
+        }
+
+        /// <summary>
+        /// 按 "a.b[0].c" 形式逐级导航。path 为空时直接返回起点（用于根数组）。
+        /// </summary>
+        private static bool TryNavigatePath(JsonElement start, string path, out JsonElement result)
+        {
+            result = start;
+            if (string.IsNullOrWhiteSpace(path)) return true;
+
+            foreach (var part in path.Split('.'))
+            {
+                if (string.IsNullOrEmpty(part)) continue;
+
+                if (part.Contains("[") && part.EndsWith("]"))
+                {
+                    // Handle Array Index: list[0]
+                    int idxStart = part.IndexOf('[');
+                    string name = part.Substring(0, idxStart);
+
+                    if (!int.TryParse(part.Substring(idxStart + 1, part.Length - idxStart - 2), out int index)) return false;
+
+                    if (!string.IsNullOrEmpty(name))
+                    {
+                        if (result.ValueKind != JsonValueKind.Object || !result.TryGetProperty(name, out result)) return false;
+                    }
+
+                    if (result.ValueKind != JsonValueKind.Array || index >= result.GetArrayLength()) return false;
+                    result = result[index];
+                }
+                else
+                {
+                    // Handle Object Property
+                    if (result.ValueKind != JsonValueKind.Object || !result.TryGetProperty(part, out result)) return false;
+                }
+            }
+            return true;
         }
 
         private static string JsonElementToString(JsonElement element)
