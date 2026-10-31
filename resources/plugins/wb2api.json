@@ -22,6 +22,14 @@
       "scope": "global",
       "placeholder": "登录密码",
       "default": "1"
+    },
+    {
+      "key": "platform",
+      "label": "平台筛选",
+      "type": "text",
+      "scope": "global",
+      "placeholder": "留空=全部平台合计",
+      "default": "workbuddy"
     }
   ],
   "execution": {
@@ -43,7 +51,7 @@
         "id": "acct",
         "url": "http://127.0.0.1:8790/api/overview?days=1",
         "method": "GET",
-        "headers": { "X-Admin-Token": "{{admin_token}}" },
+        "headers": { "X-Admin-Token": "{{admin_token}}", "X-Platform": "{{platform}}" },
         "extract": {
           "remain": "accounts.balance_remain",
           "total": "accounts.balance_total",
