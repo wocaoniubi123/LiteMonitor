@@ -1,0 +1,44 @@
+# ===== .NET 构建产物 =====
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+ARM/
+ARM64/
+publish/
+stage/
+*.user
+*.suo
+*.userprefs
+
+# ===== Visual Studio / Rider =====
+.vs/
+.idea/
+*.sln.docstates
+*.DotSettings.user
+
+# ===== 编译中间文件 =====
+*.pdb
+*.cache
+project.lock.json
+project.assets.json
+
+# ===== 运行期数据（本地状态，不进仓库）=====
+# 用户配置与历史记录由程序在运行目录生成
+settings.json
+settings.json.bak
+HardwareHistory.json
+HardwareHistory.json.bak
+TrafficHistory.json
+TrafficHistory.json.bak
+LiteMonitor_Error.log
+
+# ===== 发布压缩包（只忽略仓库根目录的，resources/assets 里的 driver.zip 要保留）=====
+/*.zip
+
+# ===== 系统杂项 =====
+Thumbs.db
+Desktop.ini
+.DS_Store
