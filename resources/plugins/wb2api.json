@@ -237,8 +237,8 @@
     },
     {
       "key": "link",
-      "label": "连接",
-      "short_label": "连接",
+      "label": "在途：",
+      "short_label": "在途：",
       "format_val": "{{active ?? '-'}}",
       "color": "{{link_color}}",
       "keep_on_error": true
